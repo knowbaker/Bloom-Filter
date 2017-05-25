@@ -18,6 +18,7 @@ public class BloomFilter<E extends Serializable> {
 			throw new RuntimeException("Could not initialize MD5 message digest", e);
 		}
 	}
+	
 	/**
 	 * Constructs a Bloom filter with provided values of m and k
 	 * @param m size of the boolean array (bit array in the original Bloom filter defintion)
@@ -33,13 +34,13 @@ public class BloomFilter<E extends Serializable> {
 	
 	/*
 	 * @see http://blog.michaelschmatz.com/2016/04/11/how-to-write-a-bloom-filter-cpp/
-	 * @see http://citeseer.ist.psu.edu/viewdoc/download;jsessionid=4060353E67A356EF9528D2C57C064F5A?doi=10.1.1.152.579&rep=rep1&type=pdf
+	 * @see https://www.eecs.harvard.edu/~michaelm/postscripts/rsa2008.pdf
 	 */
 	public void put(E e) {
 		byte[] bytes = Util.getBytes(e);
 		DIGEST.reset();
 		DIGEST.update(bytes);
-		byte[] digest = DIGEST.digest();//128 bit MD5 digest; take first 64 bit part
+		byte[] digest = DIGEST.digest();//128 bit MD5 digest; take first 64 bit part and break it into two 32-bit ints as two hashes
 		int hash1 = Util.convertToInt(digest, 0);
 		int hash2 = Util.convertToInt(bytes, 4);
 		for(int i = 0; i < k; i++)

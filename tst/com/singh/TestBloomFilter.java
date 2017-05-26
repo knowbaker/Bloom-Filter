@@ -1,8 +1,7 @@
 package com.singh;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertTrue;
 
-import org.hamcrest.core.Is;
 import org.junit.Test;
 
 public class TestBloomFilter {

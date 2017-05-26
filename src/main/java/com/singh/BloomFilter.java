@@ -8,20 +8,12 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
 public class BloomFilter<E extends Serializable> {
-	private static final MessageDigest DIGEST;
 	private final int m, k;
 	private boolean[] filter;
-	static {
-		try {
-			DIGEST = MessageDigest.getInstance("MD5");
-		} catch (NoSuchAlgorithmException e) {
-			throw new RuntimeException("Could not initialize MD5 message digest", e);
-		}
-	}
 	
 	/**
 	 * Constructs a Bloom filter with provided values of m and k
-	 * @param m size of the boolean array (bit array in the original Bloom filter defintion)
+	 * @param m size of the boolean array (bit array in the original Bloom filter definition)
 	 * @param k number of hash functions
 	 * @see <a href="https://en.wikipedia.org/wiki/Bloom_filter"></a> 
 	 */
@@ -37,18 +29,29 @@ public class BloomFilter<E extends Serializable> {
 	 * @see https://www.eecs.harvard.edu/~michaelm/postscripts/rsa2008.pdf
 	 */
 	public void put(E e) {
-		byte[] bytes = Util.getBytes(e);
-		DIGEST.reset();
-		DIGEST.update(bytes);
-		byte[] digest = DIGEST.digest();//128 bit MD5 digest; take first 64 bit part and break it into two 32-bit ints as two hashes
+		byte[] digest = Util.getMd5DigestOf(e);//128 bit MD5 digest; take first 64 bit part and break it into two 32-bit ints as two hashes
 		int hash1 = Util.convertToInt(digest, 0);
-		int hash2 = Util.convertToInt(bytes, 4);
-		for(int i = 0; i < k; i++)
-			filter[(hash1 + i*hash2) % m] = true;
+		int hash2 = Util.convertToInt(digest, 4);
+		for(int i = 0; i < k; i++) {
+			int x = hash1 + i*hash2;
+			if(x < 0)
+				x &= 0x7fffffff;
+			filter[x % m] = true;
+		}
 	}
 	
 	public boolean probablyContains(E e) {
-		throw new UnsupportedOperationException();
+		byte[] digest = Util.getMd5DigestOf(e);//128 bit MD5 digest; take first 64 bit part and break it into two 32-bit ints as two hashes
+		int hash1 = Util.convertToInt(digest, 0);
+		int hash2 = Util.convertToInt(digest, 4);
+		for(int i = 0; i < k; i++) {
+			int x = hash1 + i*hash2;
+			if(x < 0)
+				x &= 0x7fffffff;
+			if(!filter[x % m])
+				return false;
+		}
+		return true;
 	}
 	
 	public int getM() {
@@ -73,7 +76,20 @@ public class BloomFilter<E extends Serializable> {
 		
 		private static int convertToInt(byte[] bytes, int startIdx) {
 			if(bytes.length - startIdx < 4) throw new IllegalArgumentException("Insufficient bits to form 32 bit int");
-			return bytes[startIdx] << 24 | (bytes[startIdx+1] & 0xff) << 16 | (bytes[startIdx+2] & 0xff) << 8 | bytes[startIdx+3] & 0xff; 
+			return (bytes[startIdx] & 0x7f) << 24 | (bytes[startIdx+1] & 0xff) << 16 | (bytes[startIdx+2] & 0xff) << 8 | bytes[startIdx+3] & 0xff; 
+		}
+		
+		private static <E extends Serializable> byte[] getMd5DigestOf(E e) {
+			byte[] bytes = Util.getBytes(e);
+			MessageDigest md;
+			try {
+				md = MessageDigest.getInstance("MD5");
+			} catch (NoSuchAlgorithmException e1) {
+				throw new RuntimeException("Unable to create digest", e1);
+			}
+			md.update(bytes);
+			byte[] digest = md.digest();
+			return digest;
 		}
 	}
 }

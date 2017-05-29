@@ -9,7 +9,7 @@ import java.security.NoSuchAlgorithmException;
 
 public class BloomFilter<E extends Serializable> {
 	private final int m, k;
-	private boolean[] filter;
+	private final boolean[] filter;
 	
 	/**
 	 * Constructs a Bloom filter with provided values of m and k
